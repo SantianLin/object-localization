@@ -137,9 +137,14 @@ def main():
 
     # TODO (Q1.1): define loss function (criterion) and optimizer from [1]
     # also use an LR scheduler to decay LR by 10 every 30 epochs
-    criterion = None
-    optimizer = None
-
+    
+    
+    criterion = nn.BCELoss().to(device)
+    optimizer = torch.optim.SGD(model.parameters(), args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay)
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    scheduler = StepLR(optimizer, step_size=30, gamma=0.1)
 
     # optionally resume from a checkpoint
     if args.resume:
@@ -163,8 +168,12 @@ def main():
     # Ensure that the sizes are 512x512
     # Also ensure that data directories are correct
     # The ones use for testing by TAs might be different
-    train_dataset = None
-    val_dataset = None
+    device = torch.device("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        
+    train_dataset = VOCDataset('trainval', image_size=512)
+    val_dataset = VOCDataset('test', image_size=512)
     train_sampler = None
 
     train_loader = torch.utils.data.DataLoader(
@@ -190,11 +199,14 @@ def main():
 
     # TODO (Q1.3): Create loggers for wandb.
     # Ideally, use flags since wandb makes it harder to debug code.
-
+    
+    wandb.init(project="vlr-hw1")
+    # logging the loss
+#     wandb.log({'epoch': epoch, 'loss': loss})
 
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
+        train(train_loader, model, criterion, optimizer, epoch, device)
 
         # evaluate on validation set
         if epoch % args.eval_freq == 0 or epoch == args.epochs - 1:
@@ -214,7 +226,7 @@ def main():
 
 
 # TODO: You can add input arguments if you wish
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, device):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -231,7 +243,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # TODO (Q1.1): Get inputs from the data dict
         # Convert inputs to cuda if training on GPU
-        target = None
+        (images, target) = data
+        images = images.to(device, non_blocking=True)
+        target = target.to(device, non_blocking=True)
 
         # TODO (Q1.1): Get output from model
         imoutput = None
@@ -239,7 +253,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # TODO (Q1.1): Perform any necessary operations on the output
 
         # TODO (Q1.1): Compute loss using ``criterion``
-        loss = None
+        loss = criterion(imoutput, target)
 
         # measure metrics and record loss
         m1 = metric1(imoutput.data, target)

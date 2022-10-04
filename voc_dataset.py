@@ -161,8 +161,13 @@ class VOCDataset(Dataset):
             4. You may have to write a custom collate_fn since some of the attributes below may be variable in number for each data point
         """
         proposals = None
-
-
+        prop_temp = self.roi_data['boxes'][0,index][0:self.top_n]
+        proposals = {}
+        i=0
+        for [y_min, x_min, y_max, x_max] in prop_temp:
+            proposals[self.roi_data['boxScores'][0,index][i][0]]=([y_min/height, x_min/width, y_max/height, x_max/width])
+            i=i+1
+#         proposals = self.roi_data
         ret = {}
         ret['image'] = img
         ret['label'] = label
